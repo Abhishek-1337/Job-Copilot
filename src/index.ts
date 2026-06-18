@@ -1,68 +1,52 @@
-import "dotenv/config";
-import OpenAI from "openai";
-import * as readline from "node:readline/promises"; 
-import { zodTextFormat } from "openai/helpers/zod";
-import { z } from "zod";
+import { parseJobDescription } from "./job-extraction.js";
 
-const apiKey = process.env.OPENAI_API_KEY;
+process.stdin.setRawMode(true);
+process.stdin.resume();
+process.stdin.setEncoding("utf8");
 
-if (!apiKey) {
-    throw new Error(
-        "Missing OpenAI API key. Set OPENAI_API_KEY in your .env file or shell environment."
-    );
-}
+process.stdout.write("\x1b[?2004h");
 
+let buffer = "";
 let jobDescription: string = "";
+let isPasting = false;
 
-async function main() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+console.log("Please paste the job description (Press Ctrl+C to exit):");
+process.stdin.on("data", (chunk: string) => {
+  if (chunk.includes("\x1b[200~")) {
+    isPasting = true;
+    chunk = chunk.replace("\x1b[200~", "");
+  }
 
-  try {
-    while (true) {
-      jobDescription = await rl.question(`Paste your job description here: `);
-      
-      if (jobDescription.trim() !== "") {
-        console.log(`Thinking, ${jobDescription}!`);
-        break; 
+  if (chunk.includes("\x1b[201~")) {
+    isPasting = false;
+    chunk = chunk.replace("\x1b[201~", "");
+  }
+
+  for (const char of chunk) {
+    if (char === "\u0003") {
+      cleanup();
+      process.exit();
+    }
+
+    if (char === "\r" || char === "\n") {
+      if (isPasting) {
+        buffer += "\n";
+        process.stdout.write("\n");
+      } else {
+        process.stdout.write("\n");
+        jobDescription += buffer;
+        buffer = "";
+        parseJobDescription(jobDescription);
       }
+      continue;
+    }
 
-      console.log('❌ Invalid input. Please try again.');
-    }
-  } finally {
-    rl.close(); 
-    }
+    buffer += char;
+    process.stdout.write(char);
+  }
+});
+
+function cleanup() {
+  process.stdout.write("\x1b[?2004l");
 }
 
-main().catch(console.error);
-
-const client = new OpenAI({ apiKey });
-
-const JobRequirementSchema = z.object({
-    skills: z.array(z.string()).nonempty("Skills array cannot be empty"),
-    experience: z.string().nonempty("Experience field cannot be empty"),
-    education: z.string().nonempty("Education field cannot be empty"),
-    location: z.string().nonempty("Location field cannot be empty"),
-    remote: z.boolean().optional()
-});
-
-const response = await client.responses.create({
-    model: "gpt-5.2",
-    input: [
-        {
-            role: "system",
-            content: "You are a helpful assistant that extract job requirements from a raw job description that user will provide you. You will return the extracted job requirements in a JSON format."
-        },
-        {
-            role: "user",
-            content: jobDescription
-        }
-    ],
-    text: {
-        format: zodTextFormat(JobRequirementSchema, "jobRequirements"),
-    }
-});
-
-console.log(response.output_text); 

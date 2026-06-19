@@ -104,6 +104,7 @@ export async function agent({
 }) {
     let iteration = 0;
     let messages: MessageType[] = setInitialMessage(prompt);
+    const tools = toolRegistry();
     while(true) {
         const response = await ai(messages as ResponseInput);
         if(!response) {
@@ -114,22 +115,24 @@ export async function agent({
 
         if(res.type === "tool_call") {
             const toolName = res.tool;
-            const toolArgs = res.args;
             const reason = res.reason;
+            const fn = tools[toolName];
+            
+            if (typeof fn !== "function") throw new Error(`Unknown tool: ${toolName}`);
 
-            const tools = toolRegistry();
-            if(tools[toolName]) {
-                const toolResponse = await tools[toolName](...Object.values(toolArgs));
-                messages.push({ 
-                    role: "user",
-                    content: `Tool ${toolName} called for reason: ${reason}. Tool response: ${JSON.stringify(toolResponse)}`
-                });
-                console.log(`Tool ${toolName} called for reason: ${reason}`);
-                console.log(`Tool response: ${JSON.stringify(toolResponse)}`);
-
-            } else {
-                console.log(`Tool ${toolName} not found.`);
+            const argsObj = res.args ?? {};
+            if (argsObj === null || typeof argsObj !== "object" || Array.isArray(argsObj)) {
+              throw new Error(`Invalid args for tool ${toolName}`);
             }
+
+            const toolResponse = await fn(argsObj); 
+
+            messages.push({ 
+                role: "user",
+                content: `Tool ${toolName} called for reason: ${reason}. Tool response: ${JSON.stringify(toolResponse)}`
+            });
+            console.log(`Tool ${toolName} called for reason: ${reason}`);
+            console.log(`Tool response: ${JSON.stringify(toolResponse)}`);
         }
 
         iteration++;

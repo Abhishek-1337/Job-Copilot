@@ -1,7 +1,11 @@
 import { parseJobDescription } from "./job-extractor.js";
+import { parseResumeTool } from "./resume-extractor.js";
 
-export const toolRegistry = () : Record<string, any> => {
+type ToolHandler = (args: Record<string, unknown>) => Promise<unknown>;
+
+export const toolRegistry = (): Record<string, ToolHandler> => {
   return {
-    "analyzeJob": parseJobDescription
+    "analyzeJob": parseJobDescription as ToolHandler,
+    "getResume": parseResumeTool as ToolHandler
   };
 };

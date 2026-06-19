@@ -2,6 +2,13 @@ import "dotenv/config";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
+import fs from "fs/promises";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const pdf = require("pdf-parse/lib/pdf-parse.js") as (
+    dataBuffer: Buffer
+) => Promise<{ text: string }>;
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -13,7 +20,7 @@ if (!apiKey) {
 
 const client = new OpenAI({ apiKey });
 
-const JobRequirementSchema = z.object({
+const ResumeDataSchema = z.object({
     skills: z.array(z.string()).nonempty("Skills array cannot be empty"),
     experience: z.string().nonempty("Experience field cannot be empty"),
     education: z.string().nonempty("Education field cannot be empty"),
@@ -21,7 +28,7 @@ const JobRequirementSchema = z.object({
     remote: z.boolean().optional().nullable()
 });
 
-export const jobExtractorTool = {
+export const resumeExtractorTool = {
     name: "function",
     prompt: "You are a helpful assistant that extracts job requirements from a raw job description that the user will provide. You will return the extracted job requirements in a JSON format."
 
@@ -63,16 +70,17 @@ const ai = async ({
     }
 }
 
-export const parseJobDescription = async ({
-    jobDescription,
-}: {
-    jobDescription: string;
-}) => {
-    const systemContent = `You are a helpful assistant that extracts job requirements from a raw job description that the user will provide. You will return the extracted job requirements in a JSON format.`
+export const parseResumeTool = async (_args: Record<string, never> = {}) => {
+    const pathToResume = "resume/Resume.pdf";
+    const dataBuffer = await fs.readFile(pathToResume);
+    const pdfData = await pdf(dataBuffer);
+    const resumeText = pdfData.text;
+    const systemContent = `You are a helpful assistant that extracts resume data from a raw resume that the user will provide. You will return the extracted resume data in a JSON format.`
+
     return await ai({
-        content: jobDescription,
+        content: resumeText,
         systemContent,
-        schema: JobRequirementSchema,
-        callType: "parseJobDescription"
+        schema: ResumeDataSchema,
+        callType: "parsedResume"
     });
 }

@@ -80,6 +80,8 @@ function setInitialMessage(userPrompt: string) {
 
 
 const ai = async (message: ResponseInput) => { 
+
+    console.log("\nhello\n");
     
 
     try{
@@ -111,7 +113,9 @@ export async function agent({
             console.log("No response from AI. Exiting...");
             break;
         }
-        const res = JSON.parse(response);
+        // console.log(response);
+        const res = JSON.parse(response.trim());
+        console.log(res);
 
         if(res.type === "tool_call") {
             const toolName = res.tool;
@@ -132,13 +136,23 @@ export async function agent({
                 content: `Tool ${toolName} called for reason: ${reason}. Tool response: ${JSON.stringify(toolResponse)}`
             });
             console.log(`Tool ${toolName} called for reason: ${reason}`);
-            console.log(`Tool response: ${JSON.stringify(toolResponse)}`);
+            console.log(toolResponse);
+        }
+        else if(res.type === "final_answer") {
+            console.log("Final answer from agent:");
+            console.log(res.answer);
+            break;
+        }
+        else {
+            console.log("Invalid response type. Exiting...");
+            break;
         }
 
         iteration++;
         if(iteration > max_turn) {
+            console.log(iteration);
             console.log("Max turn reached. Exiting...");
-            break;
+            // break;
         }
     }
 }

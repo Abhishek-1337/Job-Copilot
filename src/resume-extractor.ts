@@ -77,10 +77,12 @@ export const parseResumeTool = async (_args: Record<string, never> = {}) => {
     const resumeText = pdfData.text;
     const systemContent = `You are a helpful assistant that extracts resume data from a raw resume that the user will provide. You will return the extracted resume data in a JSON format.`
 
-    return await ai({
-        content: resumeText,
-        systemContent,
-        schema: ResumeDataSchema,
-        callType: "parsedResume"
-    });
+    return resumeText;
+
+    // return await ai({
+    //     content: resumeText,
+    //     systemContent,
+    //     schema: ResumeDataSchema,
+    //     callType: "parsedResume"
+    // });
 }

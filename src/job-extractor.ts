@@ -56,7 +56,7 @@ const ai = async ({
                 }
             });
         
-            console.log(response.output_text);
+            return response.output_text;
     }
     catch(ex) {
 

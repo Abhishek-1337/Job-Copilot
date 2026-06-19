@@ -48,6 +48,20 @@ function setInitialMessage(userPrompt: string) {
                               "job": object
                             }
 
+                            4. generateCoverLetter
+                            Description:
+                            Generate a tailored cover letter for a job application.
+                            
+                            Arguments:
+                            {
+                                "resume": string | object,
+                                "job": string | object,
+                                "applicantName": string (optional),
+                                "tone": "professional" | "confident" | "friendly" (optional),
+                                "length": "short" | "medium" | "long" (optional),
+                                "extraContext": string (optional)
+                            }
+
                             Return ONLY valid JSON.
 
                             If you need a tool:

@@ -1,4 +1,5 @@
-import { parseJobDescription } from "./job-extraction.js";
+import { agent } from "./agent.js";
+import { parseJobDescription } from "./job-extractor.js";
 
 process.stdin.setRawMode(true);
 process.stdin.resume();
@@ -12,17 +13,22 @@ let isPasting = false;
 
 console.log("Please paste the job description (Press Ctrl+C to exit):");
 process.stdin.on("data", (chunk: string) => {
-  if (chunk.includes("\x1b[200~")) {
-    isPasting = true;
-    chunk = chunk.replace("\x1b[200~", "");
-  }
 
-  if (chunk.includes("\x1b[201~")) {
-    isPasting = false;
-    chunk = chunk.replace("\x1b[201~", "");
-  }
+  for (let i = 0; i < chunk.length; i++) {
 
-  for (const char of chunk) {
+    if (chunk.startsWith("\x1b[200~", i)) {
+      isPasting = true;
+      i += "\x1b[200~".length - 1;
+      continue;
+    }
+
+    if (chunk.startsWith("\x1b[201~", i)) {
+      isPasting = false;
+      i += "\x1b[201~".length - 1;
+      continue;
+    }
+
+    const char = chunk[i];
     if (char === "\u0003") {
       cleanup();
       process.exit();
@@ -35,14 +41,14 @@ process.stdin.on("data", (chunk: string) => {
       } else {
         process.stdout.write("\n");
         jobDescription += buffer;
+        agent({prompt: jobDescription, max_turn: 5});
         buffer = "";
-        parseJobDescription(jobDescription);
       }
       continue;
     }
 
     buffer += char;
-    process.stdout.write(char);
+    process.stdout.write(chunk[i] as string);
   }
 });
 

@@ -2,6 +2,8 @@ import "dotenv/config";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
+import Observer from "./observer.js";
+import type { ResponseFormatTextConfig, ResponseInput } from "openai/resources/responses/responses.mjs";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -27,6 +29,14 @@ export const jobExtractorTool = {
 
 }
 
+type Object = {
+    model: string;
+    input: ResponseInput;
+    text?: {
+        format: ResponseFormatTextConfig
+    }
+}
+
 const ai = async ({
     content, 
     systemContent,
@@ -39,7 +49,7 @@ const ai = async ({
     callType: string
 }) => { 
     try{
-          const response = await client.responses.create({
+        const object: Object = {
             model: "gpt-5.2",
             input: [
                     {
@@ -51,12 +61,33 @@ const ai = async ({
                         content: content.trim()
                     }
                 ],
-                text: {
-                    format: zodTextFormat(schema, callType),
-                }
-            });
+            text: {
+                format: zodTextFormat(schema, callType),
+            }
+        }
+
+        return await Observer({
+            client,
+            object
+        });
+        //   const response = await client.responses.create({
+        //     model: "gpt-5.2",
+        //     input: [
+        //             {
+        //                 role: "system",
+        //                 content: systemContent
+        //             },
+        //             {
+        //                 role: "user",
+        //                 content: content.trim()
+        //             }
+        //         ],
+        //         text: {
+        //             format: zodTextFormat(schema, callType),
+        //         }
+        //     });
         
-            return response.output_text;
+        //     return response.output_text;
     }
     catch(ex) {
 

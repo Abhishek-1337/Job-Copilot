@@ -14,6 +14,7 @@ if (!apiKey) {
 
 const client = new OpenAI({ apiKey });
 
+
 function setInitialMessage(userPrompt: string) {
     return  [
         {
@@ -82,7 +83,7 @@ function setInitialMessage(userPrompt: string) {
 
                             User Request:
 
-                            Analyze this job and tell me if I should apply.
+                            Analyze this job and tell me if I should apply and generate a cover letter according to it.
                         `
         },
         {
@@ -129,7 +130,6 @@ export async function agent({
         }
         // console.log(response);
         const res = JSON.parse(response.trim());
-        console.log(res);
 
         if(res.type === "tool_call") {
             const toolName = res.tool;
@@ -161,6 +161,8 @@ export async function agent({
             console.log("Invalid response type. Exiting...");
             break;
         }
+
+        break;
 
         iteration++;
         if(iteration > max_turn) {

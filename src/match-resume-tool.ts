@@ -1,7 +1,9 @@
 import "dotenv/config";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
+import type { ResponseFormatTextConfig, ResponseInput } from "openai/resources/responses/responses.mjs";
 import { z } from "zod";
+import Observer from "./observer.js";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -40,6 +42,14 @@ function serializeInput(value: unknown): string {
     }
 }
 
+type responseObjectType = {
+    model: string;
+    input: ResponseInput;
+    text?: {
+        format: ResponseFormatTextConfig
+    }
+}
+
 export const matchResumeTool = async (args: Record<string, unknown>) => {
     const { resume, job } = MatchResumeArgsSchema.parse(args);
 
@@ -57,7 +67,24 @@ export const matchResumeTool = async (args: Record<string, unknown>) => {
 
     const userContent = `Resume Input:\n${serializeInput(resume)}\n\nJob Input:\n${serializeInput(job)}`;
 
-    const response = await client.responses.create({
+    // const response = await client.responses.create({
+    //     model: "gpt-5.2",
+    //     input: [
+    //         {
+    //             role: "system",
+    //             content: systemContent,
+    //         },
+    //         {
+    //             role: "user",
+    //             content: userContent,
+    //         },
+    //     ],
+    //     text: {
+    //         format: zodTextFormat(MatchResultSchema, "matchResumeResult"),
+    //     },
+    // });
+
+    const object: responseObjectType = {
         model: "gpt-5.2",
         input: [
             {
@@ -71,10 +98,12 @@ export const matchResumeTool = async (args: Record<string, unknown>) => {
         ],
         text: {
             format: zodTextFormat(MatchResultSchema, "matchResumeResult"),
-        },
-    });
+        }
+    }
 
-    const output = response.output_text?.trim();
+    const output = await Observer({client, object});
+
+    // const output = response.output_text?.trim();
     if (!output) {
         throw new Error("No response returned by AI for resume matching.");
     }

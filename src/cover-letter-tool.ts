@@ -4,6 +4,8 @@ import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import path from "path";
 import { z } from "zod";
+import Observer from "./observer.js";
+import type { ResponseFormatTextConfig, ResponseInput } from "openai/resources/responses/responses.mjs";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -44,6 +46,14 @@ function serializeInput(value: unknown): string {
     }
 }
 
+type responseObjectType = {
+    model: string;
+    input: ResponseInput;
+    text?: {
+        format: ResponseFormatTextConfig
+    }
+}
+
 export const generateCoverLetterTool = async (args: Record<string, unknown>) => {
     const {
         resume,
@@ -73,7 +83,7 @@ export const generateCoverLetterTool = async (args: Record<string, unknown>) => 
         .filter(Boolean)
         .join("\n\n");
 
-    const response = await client.responses.create({
+    const object: responseObjectType = {
         model: "gpt-5.2",
         input: [
             {
@@ -87,10 +97,29 @@ export const generateCoverLetterTool = async (args: Record<string, unknown>) => 
         ],
         text: {
             format: zodTextFormat(CoverLetterResultSchema, "coverLetterResult"),
-        },
-    });
+        }
+    }
 
-    const output = response.output_text?.trim();
+    const output = await Observer({client, object});
+
+    // const response = await client.responses.create({
+    //     model: "gpt-5.2",
+    //     input: [
+    //         {
+    //             role: "system",
+    //             content: systemContent,
+    //         },
+    //         {
+    //             role: "user",
+    //             content: userContent,
+    //         },
+    //     ],
+    //     text: {
+    //         format: zodTextFormat(CoverLetterResultSchema, "coverLetterResult"),
+    //     },
+    // });
+
+    // const output = response.output_text?.trim();
     if (!output) {
         throw new Error("No response returned by AI for cover letter generation.");
     }

@@ -2,7 +2,8 @@ import "dotenv/config";
 import OpenAI from "openai";
 import { toolRegistry } from "./tool-registry.js";
 import type { MessageType } from "./types.js";
-import type { ResponseInput } from "openai/resources/responses/responses.mjs";
+import type { ResponseFormatTextConfig, ResponseInput } from "openai/resources/responses/responses.mjs";
+import Observer from "./observer.js";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -84,6 +85,8 @@ function setInitialMessage(userPrompt: string) {
                             User Request:
 
                             Analyze this job and tell me if I should apply and generate a cover letter according to it.
+
+                            Return single tool at a time. Do not return multiple tools in a single response.
                         `
         },
         {
@@ -93,23 +96,34 @@ function setInitialMessage(userPrompt: string) {
     ];
 }
 
+type Object = {
+    model: string;
+    input: ResponseInput;
+    text?: {
+        format: ResponseFormatTextConfig
+    }
+}
 
 const ai = async (message: ResponseInput) => { 
 
-    console.log("\nhello\n");
-    
+    const object: Object = {
+        model: "gpt-5.2",
+        input: message
+    }
 
-    try{
-          const response = await client.responses.create({
-            model: "gpt-5.2",
-            input: message
-            });
+    return await Observer({client, object});
+
+    // try{
+    //     const response = await client.responses.create({
+    //     model: "gpt-5.2",
+    //     input: message
+    //     });
         
-            return response.output_text;
-    }
-    catch(ex) {
+    //     return response.output_text;
+    // }
+    // catch(ex) {
 
-    }
+    // }
 }
 
 export async function agent({
@@ -122,13 +136,14 @@ export async function agent({
     let iteration = 0;
     let messages: MessageType[] = setInitialMessage(prompt);
     const tools = toolRegistry();
+
     while(true) {
         const response = await ai(messages as ResponseInput);
         if(!response) {
             console.log("No response from AI. Exiting...");
             break;
         }
-        // console.log(response);
+
         const res = JSON.parse(response.trim());
 
         if(res.type === "tool_call") {
@@ -161,8 +176,6 @@ export async function agent({
             console.log("Invalid response type. Exiting...");
             break;
         }
-
-        break;
 
         iteration++;
         if(iteration > max_turn) {
